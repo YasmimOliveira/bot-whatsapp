@@ -3,6 +3,7 @@ import path from 'path'
 import P from 'pino'; 
 import {Boom} from '@hapi/boom'
 import { allowedNumbers } from "./config";
+import { baileysIs, getContent } from "./utils";
 
 const logger = P({level: "debug"});
 
@@ -52,13 +53,44 @@ async function connectOnWhatsapp() {
             return;
         }
 
-        const text = message.conversation;
+        const isImageMessage = baileysIs(webMessage, "image");
+        const isVideoMessage = baileysIs(webMessage, "video");
+        const isTextMessage = baileysIs(webMessage, "conversation");
+        const isExtendedTextMessage = baileysIs(webMessage, "extendedTextMessage");
 
-        if (text == "oi") {
-            await socket.sendMessage(remoteJid, {text:'olá'});
+        const body =
+        message?.conversation ||
+        message?.extendedTextMessage?.text ||
+        getContent(webMessage, "inage")?.caption ||
+        getContent(webMessage, "video")?.caption;
+
+        if (!body || !remoteJid) {
+            return;
         }
 
-        // console.log(JSON.stringify(message,null,2));
+        //Teste se o robô está on
+        if (body.toLocaleUpperCase() == "/PING") {
+            await socket.sendMessage(remoteJid, {
+                text: `pong!`
+            })
+        }
+
+        //Teste com figurinha, aqui ele esperar receber uma imagem ou vídeo
+        if (body.toLocaleUpperCase() == "/FIG") {
+            if(!isImageMessage && !isVideoMessage) {
+                await socket.sendMessage(remoteJid, {
+                    react: {key:webMessage.key, text:"❌"},
+                })
+
+                await socket.sendMessage(remoteJid, {
+                    text: `❌ Erro: envie imagem ou vídeo!`
+                })
+            }
+
+            await socket.sendMessage(remoteJid, {
+                text: `⏲️ Fazendo sua figurinha!`
+            })
+        }
         
 
     })
