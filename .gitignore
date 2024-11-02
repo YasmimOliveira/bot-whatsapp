@@ -1,0 +1,5 @@
+auth/
+build/
+node_modules/
+
+src/config.ts
