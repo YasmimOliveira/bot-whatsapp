@@ -3,7 +3,8 @@ import path from 'path'
 import P from 'pino'; 
 import {Boom} from '@hapi/boom'
 import { allowedNumbers } from "./config";
-import { baileysIs, getContent } from "./utils";
+import { baileysIs, dowloadContent, getContent, getFileNameWithoutExtesion, convertImage } from "./utils";
+import fs from "fs";
 
 const logger = P({level: "debug"});
 
@@ -85,11 +86,34 @@ async function connectOnWhatsapp() {
                 await socket.sendMessage(remoteJid, {
                     text: `❌ Erro: envie imagem ou vídeo!`
                 })
+
+                return;
             }
 
             await socket.sendMessage(remoteJid, {
-                text: `⏲️ Fazendo sua figurinha!`
+                react: {key:webMessage.key, text:"⏳"},
             })
+
+            const type = isImageMessage ? "image" : "video";
+            const inputFile = await dowloadContent({webMessage,type});
+            const outputFile = await convertImage(inputFile, `${getFileNameWithoutExtesion(inputFile)}.webp`);
+
+            setTimeout(async function () {
+                await socket.sendMessage(remoteJid, {
+                    sticker: fs.readFileSync(outputFile),
+                })
+            },1000);
+
+            await socket.sendMessage(remoteJid, {
+                react: {key:webMessage.key, text:"✅"},
+            })
+
+
+            setTimeout(function () {
+                fs.unlinkSync(outputFile);
+                fs.unlinkSync(inputFile);
+            },1000)
+            
         }
         
 

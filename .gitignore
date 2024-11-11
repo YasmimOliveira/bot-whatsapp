@@ -1,5 +1,6 @@
 auth/
 build/
 node_modules/
+temp/
 
 src/config.ts
